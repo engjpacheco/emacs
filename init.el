@@ -249,12 +249,18 @@
   :pin org
   :commands (org-capture org-agenda)
   :hook (org-mode . efs/org-mode-setup)
+  :bind ([f3] . org-agenda)
   :config
   (setq org-ellipsis " ▾")
 
   (setq org-agenda-start-with-log-mode t)
   (setq org-log-done 'time)
   (setq org-log-into-drawer t)
+
+  (setq org-agenda-files
+        '("~/org/amm/task.org"
+          "~/org/amm/amm.org"
+          "~/org/personal/dates.org"))
 
   (require 'org-habit)
   (add-to-list 'org-modules 'org-habit)
@@ -568,9 +574,10 @@
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    '("c4063322b5011829f7fdd7509979b5823e8eea2abf1fe5572ec4b7af1dd78519" default))
- '(org-agenda-files nil)
+ '(org-agenda-files
+   '("c:/Users/francisco.pacheco/org/amm/task.org" "c:/Users/francisco.pacheco/org/amm/amm.org"))
  '(package-selected-packages
-   '(page-break-lines dashboard dired-hide-dotfiles dired-open all-the-icons-dired dired-single eshell-git-prompt vterm eterm-256color rainbow-delimiters evil-nerd-commenter forge magit counsel-projectile projectile company-box company pyvenv python-mode typescript-mode dap-mode lsp-ivy lsp-treemacs lsp-ui lsp-mode visual-fill-column org-bullets hydra helpful ivy-prescient counsel ivy-rich ivy which-key doom-modeline all-the-icons doom-themes command-log-mode evil-collection general use-package no-littering gruvbox-theme evil auto-package-update)))
+   '(org-ac neotree phi-autopair autopair smartparens page-break-lines dashboard dired-hide-dotfiles dired-open all-the-icons-dired dired-single eshell-git-prompt vterm eterm-256color rainbow-delimiters evil-nerd-commenter forge magit counsel-projectile projectile company-box company pyvenv python-mode typescript-mode dap-mode lsp-ivy lsp-treemacs lsp-ui lsp-mode visual-fill-column org-bullets hydra helpful ivy-prescient counsel ivy-rich ivy which-key doom-modeline all-the-icons doom-themes command-log-mode evil-collection general use-package no-littering gruvbox-theme evil auto-package-update)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -578,26 +585,130 @@
  ;; If there is more than one, they won't work right.
  )
 
-;;This are my personal packages:
+;;This are my personal build and configs:
+;; some extra options:
+(fset 'yes-or-no-p 'y-or-n-p)                                 ; sustituye yes/no por y/n
+(setq select-enable-clipboard t)                              ; Sistema de fusión y portapapeles de Emacs.
+(global-set-key (kbd "C-c q") 'switch-to-next-buffer)
+(global-set-key (kbd "C-c w") 'switch-to-prev-buffer)
+(global-set-key (kbd "C-c e") 'eval-buffer)
+
+;; replace buffer-menu with ibuffer
+(use-package ibuffer
+  :ensure t
+  :config
+  (global-set-key (kbd "C-x C-b") #'ibuffer))
+
+;;Group bufffers in groups
+
+(setq ibuffer-saved-filter-groups
+    (quote (("default"
+		("dired" (mode . dired-mode))
+		("org" (name . "^.*org$"))
+		("web" (or (mode . web-mode) (mode . js2-mode)))
+		("shell" (or (mode . eshell-mode) (mode . shell-mode)))
+		("mu4e" (name . "\*mu4e\*"))
+		("programming" (or
+				(mode . python-mode)
+				(mode . c++-mode)))
+		("emacs" (or
+			(name . "^\\*scratch\\*$")
+			(name . "^\\*Messages\\*$")))
+		))))
+(add-hook 'ibuffer-mode-hook
+	(lambda ()
+	    (ibuffer-auto-mode 1)
+	    (ibuffer-switch-to-saved-filter-groups "default")))
+;; don't show these
+;;(add-to-list 'ibuffer-never-show-predicates "zowie")
+
+;; Don't show filter groups if there are no buffers in that group
+(setq ibuffer-show-empty-filter-groups nil)
+
+;; Don't ask for confirmation to delete marked buffers
+(setq ibuffer-expert t)
+
+;;Extra Packages
+;;smartparents auto pair braces
+(use-package smartparens
+  :defer 1
+  :delight
+  :custom (sp-escape-quotes-after-insert nil)
+  :config (smartparens-global-mode 1))
+
+(use-package company
+  :ensure t
+  :config
+   (setq company-idle-delay 0)
+   (setq company-minimum-prefix-length 3)
+   (global-company-mode t))
+
+(add-hook 'after-init-hook 'global-company-mode)
+
+(use-package neotree
+  :ensure t
+  :config
+  (setq neo-theme 'icons)
+  (global-set-key [f1] 'neotree-toggle))
+
 ;; Breaklines
 (use-package page-break-lines)
 
-
+;;Dashboard
 (use-package dashboard
   :ensure t
+  :init
+  ;;(all-the-icons-install-fonts t)
   :config
   (dashboard-setup-startup-hook))
-;; To disable shortcut "jump" indicators for each section, set
-;;(setq dashboard-show-shortcuts nil)
 (setq dashboard-startup-banner '1)
-(setq dashboard-items '((recents  . 3)
-;;                        (bookmarks . 5)
+(setq dashboard-items '((recents  . 5)
                         (projects . 3)
-                        (agenda . 3)))
-;;                        (registers . 5)))
-;;(setq dashboard-set-heading-icons t)
-;;(setq dashboard-set-file-icons t)
-;;(setq dashboard-set-navigator t)
-;;(setq dashboard-projects-switch-function 'counsel-projectile-switch-project-by-name
+                        (agenda . 5)))
+(setq dashboard-set-heading-icons t)
+(setq dashboard-set-file-icons t)
+(setq dashboard-set-navigator t)
+(setq dashboard-projects-switch-function 'counsel-projectile-switch-project-by-name)
 (setq dashboard-page-seperator "\n\f\n")
+(global-set-key (kbd "<f2>") 'open-dashboard) ;F10 para ir al Dashboard
 
+(defun open-dashboard ()
+  "Open the *dashboard* buffer and jump to the first widget."
+  (interactive)
+  (delete-other-windows)
+  ;; Refresh dashboard buffer
+  (if (get-buffer dashboard-buffer-name)
+      (kill-buffer dashboard-buffer-name))
+  (dashboard-insert-startupify-lists)
+  (switch-to-buffer dashboard-buffer-name))
+
+(setq dashboard-navigator-buttons
+	 `((
+	    (,(when (display-graphic-p)
+		(all-the-icons-octicon "tools" :height 1.0 :v-adjust 0.0))
+	     "Configuration" "Open emacs init.el config file"
+	     (lambda (&rest _) (find-file (expand-file-name  "~/.emacs.d/init.el"))))
+	    (,(when (display-graphic-p)
+		(all-the-icons-octicon "calendar" :height 1.0 :v-adjust 0.0))
+	     "Agenda" "Agenda personal"
+	     (lambda (&rest _)
+	       (interactive)
+	       (if (get-buffer "*Org Agenda*")
+		   (progn
+		     (switch-to-buffer-other-window "*Org Agenda*")
+		     (kill-buffer "*Org Agenda*")
+		     (org-agenda-list))
+		 (split-window-right)
+		 (org-agenda-list))))
+	    )))
+
+;;Things to orgmode
+;;autocompletado
+(use-package org-ac
+  :ensure t
+  :config
+  (org-ac/config-default))
+
+;;quick task capture
+(global-set-key (kbd "C-c c") 'org-capture)
+(setq org-default-notes-file "~/org/amm/task.org")
